@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog Time · nutsathegoat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="stars"></div>
+<div class="nebula"></div>
+
+<header class="site-header">
+  <div class="logo">nutsathegoat</div>
+  <nav class="main-nav">
+    <a href="index.html">Home</a>
+    <a href="about.html">About me</a>
+    <a href="gallery.html">Gallery</a>
+    <a href="quiz.html">Quiz</a>
+    <a href="blog.html" class="nav-pill active">Blog<br>Time</a>
+    <a href="contact.html" class="nav-pill">Contact<br>Me</a>
+  </nav>
+</header>
+
+<main class="blog-main">
+
+  <h1 class="page-title">Blog Time</h1>
+
+  <div id="singlePostView" class="single-post" hidden>
+    <a href="blog.html" class="back-link">← all posts</a>
+    <h2 id="postTitle"></h2>
+    <p class="latest-date" id="postDate"></p>
+    <div class="post-body" id="postBody"></div>
+  </div>
+
+  <div id="postListView">
+    <section class="new-post-card">
+      <h2 class="quote-label">Write a new post</h2>
+      <input type="text" id="newPostTitle" placeholder="Post title" maxlength="80">
+      <textarea id="newPostBody" placeholder="Write it here…" rows="5"></textarea>
+      <button class="save-btn" id="publishBtn">Publish</button>
+    </section>
+
+    <div class="post-grid" id="postGrid"></div>
+  </div>
+
+</main>
+
+<script src="data/posts.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
