@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Message box — nutsathegoat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Inter:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="stars"></div>
+<div class="nebula"></div>
+
+<header class="site-header">
+  <div class="logo">nutsathegoat</div>
+  <nav class="main-nav">
+    <a href="index.html">Home</a>
+    <a href="about.html">About me</a>
+    <a href="gallery.html">Gallery</a>
+    <a href="quiz.html">Quiz</a>
+    <a href="blog.html" class="nav-pill">Blog<br>Time</a>
+    <a href="contact.html" class="nav-pill active">Contact<br>Me</a>
+  </nav>
+</header>
+
+<main class="mailbox-main">
+
+  <a href="contact.html" class="back-link">← back</a>
+
+  <h1 class="mailbox-title">message box</h1>
+  <p class="mailbox-subtitle">find other letters and answers here</p>
+
+  <button id="ownerLoginBtn" class="owner-login-btn">owner login</button>
+
+  <div id="ownerLoginPanel" class="owner-login-panel" hidden>
+    <input type="email" id="ownerEmail" placeholder="email">
+    <input type="password" id="ownerPassword" placeholder="password">
+    <button id="ownerSubmitBtn">log in</button>
+    <button id="ownerCancelBtn" class="owner-cancel-btn">cancel</button>
+    <p id="ownerLoginError" class="letter-status error" hidden></p>
+  </div>
+
+  <p id="ownerStatus" class="owner-status" hidden></p>
+
+  <div class="letters-scroll" id="lettersScroll">
+    <p id="lettersEmpty" class="empty-note" hidden>no letters yet — be the first to send one!</p>
+    <div id="lettersList"></div>
+  </div>
+
+</main>
+
+<script type="module">
+  import { db, auth } from "./firebase-config.js";
+  import {
+    collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  import {
+    signInWithEmailAndPassword, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+  const lettersList = document.getElementById("lettersList");
+  const lettersEmpty = document.getElementById("lettersEmpty");
+  const ownerLoginBtn = document.getElementById("ownerLoginBtn");
+  const ownerLoginPanel = document.getElementById("ownerLoginPanel");
+  const ownerCancelBtn = document.getElementById("ownerCancelBtn");
+  const ownerSubmitBtn = document.getElementById("ownerSubmitBtn");
+  const ownerLoginError = document.getElementById("ownerLoginError");
+  const ownerStatus = document.getElementById("ownerStatus");
+
+  let isOwner = false;
+  let letters = [];
+
+  // ---- auth state ----
+  onAuthStateChanged(auth, (user) => {
+    isOwner = !!user;
+    ownerLoginBtn.hidden = isOwner;
+    ownerStatus.hidden = !isOwner;
+    if (isOwner) {
+      ownerStatus.textContent = `logged in as ${user.email} — you can reply below`;
+      ownerLoginPanel.hidden = true;
+    }
+    renderLetters();
+  });
+
+  ownerLoginBtn.addEventListener("click", () => {
+    ownerLoginPanel.hidden = false;
+  });
+  ownerCancelBtn.addEventListener("click", () => {
+    ownerLoginPanel.hidden = true;
+    ownerLoginError.hidden = true;
+  });
+  ownerSubmitBtn.addEventListener("click", async () => {
+    const email = document.getElementById("ownerEmail").value.trim();
+    const password = document.getElementById("ownerPassword").value;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      ownerLoginError.hidden = true;
+    } catch (err) {
+      ownerLoginError.hidden = false;
+      ownerLoginError.textContent = "login failed — check your email and password.";
+    }
+  });
+
+  // simple way to log out again: click your own status line
+  ownerStatus.addEventListener("click", async () => {
+    if (isOwner && confirm("log out?")) await signOut(auth);
+  });
+
+  // ---- live letters feed ----
+  const q = query(collection(db, "letters"), orderBy("createdAt", "desc"));
+  onSnapshot(q, (snapshot) => {
+    letters = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderLetters();
+  });
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function renderLetters() {
+    lettersEmpty.hidden = letters.length > 0;
+    lettersList.innerHTML = letters.map(letter => {
+      const date = letter.createdAt?.toDate ? letter.createdAt.toDate().toLocaleDateString() : "";
+      const replyBlock = letter.reply
+        ? `<div class="letter-reply"><span class="letter-reply-label">nutsa replied:</span><p>${escapeHtml(letter.reply)}</p></div>`
+        : (isOwner
+            ? `<div class="letter-reply-form">
+                 <textarea class="reply-input" data-id="${letter.id}" placeholder="write a reply..."></textarea>
+                 <button class="reply-send-btn" data-id="${letter.id}">reply</button>
+               </div>`
+            : `<p class="letter-no-reply">no reply yet</p>`);
+
+      return `
+        <div class="letter-card">
+          <div class="letter-card-head">
+            <span class="letter-card-name">${escapeHtml(letter.name)}</span>
+            <span class="letter-card-date">${date}</span>
+          </div>
+          <p class="letter-card-body">${escapeHtml(letter.message)}</p>
+          ${replyBlock}
+        </div>`;
+    }).join("");
+
+    if (isOwner) {
+      lettersList.querySelectorAll(".reply-send-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.dataset.id;
+          const textarea = lettersList.querySelector(`.reply-input[data-id="${id}"]`);
+          const reply = textarea.value.trim();
+          if (!reply) return;
+          btn.disabled = true;
+          btn.textContent = "sending...";
+          try {
+            await updateDoc(doc(db, "letters", id), {
+              reply,
+              repliedAt: serverTimestamp()
+            });
+          } catch (err) {
+            console.error(err);
+            alert("couldn't send reply — try again.");
+            btn.disabled = false;
+            btn.textContent = "reply";
+          }
+        });
+      });
+    }
+  }
+</script>
+
+</body>
+</html>

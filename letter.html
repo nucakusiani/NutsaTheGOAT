@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Write a letter — nutsathegoat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Inter:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="stars"></div>
+<div class="nebula"></div>
+
+<header class="site-header">
+  <div class="logo">nutsathegoat</div>
+  <nav class="main-nav">
+    <a href="index.html">Home</a>
+    <a href="about.html">About me</a>
+    <a href="gallery.html">Gallery</a>
+    <a href="quiz.html">Quiz</a>
+    <a href="blog.html" class="nav-pill">Blog<br>Time</a>
+    <a href="contact.html" class="nav-pill active">Contact<br>Me</a>
+  </nav>
+</header>
+
+<main class="letter-main">
+
+  <a href="contact.html" class="back-link">← back</a>
+
+  <div class="letter-layout">
+
+    <div class="letter-field">
+      <label for="nickname">enter your nickname:</label>
+      <input type="text" id="nickname" maxlength="40" placeholder="your name or nickname">
+    </div>
+
+    <div class="letter-field">
+      <label for="letterBody" class="letter-write-label">write your letter:</label>
+      <div class="envelope">
+        <textarea id="letterBody" maxlength="2000" placeholder="say hi, ask a question, whatever's on your mind..."></textarea>
+      </div>
+    </div>
+
+    <button id="sendLetterBtn" class="send-letter-btn">send a letter</button>
+    <p id="letterStatus" class="letter-status" hidden></p>
+
+  </div>
+
+</main>
+
+<script type="module">
+  import { db } from "./firebase-config.js";
+  import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  const btn = document.getElementById("sendLetterBtn");
+  const status = document.getElementById("letterStatus");
+
+  btn.addEventListener("click", async () => {
+    const name = document.getElementById("nickname").value.trim();
+    const message = document.getElementById("letterBody").value.trim();
+
+    if (!name || !message) {
+      status.hidden = false;
+      status.textContent = "please fill in your nickname and a letter first!";
+      status.className = "letter-status error";
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "sending...";
+
+    try {
+      await addDoc(collection(db, "letters"), {
+        name,
+        message,
+        createdAt: serverTimestamp()
+      });
+      status.hidden = false;
+      status.className = "letter-status success";
+      status.textContent = "your letter is on its way! redirecting to the mailbox...";
+      setTimeout(() => { window.location.href = "mailbox.html"; }, 1400);
+    } catch (err) {
+      console.error(err);
+      status.hidden = false;
+      status.className = "letter-status error";
+      status.textContent = "something went wrong sending that — try again in a moment.";
+      btn.disabled = false;
+      btn.textContent = "send a letter";
+    }
+  });
+</script>
+
+</body>
+</html>

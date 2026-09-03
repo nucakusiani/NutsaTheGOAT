@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /letters/{letterId} {
+      // anyone can read all letters (so visitors can see them in the mailbox)
+      allow read: if true;
+
+      // anyone can create a NEW letter, but only with these exact fields —
+      // they cannot set a reply themselves
+      allow create: if request.resource.data.keys().hasOnly(['name', 'message', 'createdAt'])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() < 60
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() > 0
+                    && request.resource.data.message.size() < 2000;
+
+      // only YOU (signed in with the owner email/password you created)
+      // can update a letter — this is how replies get added
+      allow update: if request.auth != null
+                    && request.auth.token.email == "n.kusiani6@gmail.com";
+
+      allow delete: if request.auth != null
+                    && request.auth.token.email == "n.kusiani6@gmail.com";
+    }
+  }
+}
